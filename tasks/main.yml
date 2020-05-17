@@ -74,38 +74,80 @@
     src: "{{ wireguard_path }}/privatekey"
   register: private
 
+
 - name: Read public key
   slurp:
     src: "{{ wireguard_path }}/publickey"
   register: public
 
+- name: Ensure qrencode in installed
+  apt:
+    pkg: qrencode
+    state: present
+  when: clients | length > 0
+
+# do we need this?  I don't think so, because we use 'creates:' below.
 - name: Read private client's key
   stat:
-    path: "{{ wireguard_path }}/client_privatekey"
+    path: "{{ wireguard_path }}/{{ item.name }}.privatekey"
+  loop: "{{ clients }}"
   register: client_privatekey
-  run_once: true
-  when: client_vpn_ip | length > 0
 
 - name: Generate wireguard client's keys
-  shell: "umask 077; wg genkey | tee {{ wireguard_path  }}/client_privatekey | wg pubkey > {{ wireguard_path }}/client_publickey"
-  run_once: true
-  when:
-    - client_vpn_ip | length > 0
-    - not client_privatekey.stat.exists
+  shell: "umask 077; wg genkey | tee {{ wireguard_path  }}/{{ item.name }}.privatekey | wg pubkey > {{ wireguard_path }}/{{ item.name }}.publickey"
+  args:
+    creates: "{{ wireguard_path }}/{{ item.name }}.privatekey"
+  #run_once: true
+  loop: "{{ clients }}"
 
 - name: Read private client's key
   slurp:
-    src: "{{ wireguard_path }}/client_privatekey"
-  register: client_privatekey
-  run_once: true
-  when: client_vpn_ip | length > 0
+    src: "{{ wireguard_path }}/{{ item.name }}.privatekey"
+  loop: "{{ clients }}"
+  register: client_privatekeys
+  tags: ["dbg"]
+#  run_once: true
+#  when: clients | length > 0
 
 - name: Read public client's key
   slurp:
-    src: "{{ wireguard_path }}/client_publickey"
-  register: client_publickey
+    src: "{{ wireguard_path }}/{{ item.name}}.publickey"
+  loop: "{{ clients }}"
+  register: client_publickeys
+  tags: ["dbg"]
+#  run_once: true
+#  when: clients | length > 0
+
+#- name: Set client privkey facts
+#  set_fact:
+#    client_private_keys: client_private_keys
+- name: prepare key data
+  set_fact:
+    client_keydata: "{{ lookup('together', client_publickeys.results, client_privatekeys.results) }}"
+  tags: ["dbg"]
+
+#
+
+#- name: tmp
+#  debug: var=item
+#  with_together:
+#    - "{{ client_publickeys.results }}"
+#    - "{{ client_privatekeys.results }}"
+#  register: client_keydata
+#  tags: ["dbg"]
+
+- name: "Ensure local client-config dir exists: {{ client_wireguard_path }}"
+  file:
+    path: "{{ client_wireguard_path }}"
+    state: directory
+    mode: 0700
   run_once: true
-  when: client_vpn_ip | length > 0
+  vars:
+    ansible_connection: local
+  delegate_to: localhost
+  become: false
+  when: clients | length > 0
+  tags: ["dbg"]
 
 - name: Generate configs
   template:
@@ -116,17 +158,49 @@
     mode: "u=rw,g=r,o="
   register: config
 
+- name: Ensure client config directory structure exists
+  file:
+    path: "{{ client_wireguard_path }}/{{ item.0.item.name }}"
+    mode: 0700
+    state: directory
+  loop: "{{ client_keydata }}"
+  delegate_to: localhost
+  run_once: true
+  tags: ["dbg"]
+
+# because in the client-config template, template, inventory_hostname=localhost
+- name: Set vpn_server_host fact for clients
+  set_fact:
+    vpn_server_host: "{{ inventory_hostname }}"
+
+#- name: deeebug
+#  debug: var=vars
+#  tags: ["bork"]
+
 - name: Generate client's config
   template:
     src: client.conf.j2
-    dest: "{{ client_wireguard_path }}"
-    mode: "u=rw,g=,o="
-  vars:
-    ansible_connection: local
+    dest: "{{ client_wireguard_path }}/{{ item.0.item.name }}/{{ inventory_hostname }}.conf"
+    mode: 0600
+#  vars:
+#    ansible_connection: local
   become: no
-  run_once: true
-  when: client_vpn_ip | length > 0
+  loop: "{{ client_keydata }}"
+  when: '"ingress" in group_names'
   delegate_to: localhost
+  tags: ["dbg"]
+
+- name: Ensure IP forwarding is enabled
+  sysctl:
+    name: "{{ item }}"
+    value: '1'
+    sysctl_set: yes
+    reload: yes
+  loop:
+    - net.ipv4.ip_forward
+    - net.ipv6.conf.all.forwarding
+    - net.ipv4.conf.all.proxy_arp
+  when: '"egress" in groups'
 
 - name: Start and enable wg-quick systemd service
   systemd:

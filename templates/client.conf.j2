@@ -1,15 +1,29 @@
-[Interface]
-Address = {{ client_vpn_ip }}
-PrivateKey = {{ client_privatekey.content | b64decode | trim }}
+{% set name = item.0.item.name %}
+{% set ip = item.0.item.ip %}
+{% set privkey = item.1.content %}
+{% set pubkey = item.0.content -%}
 
+[Interface]
+Address = {{ ip }}
+PrivateKey = {{ privkey | b64decode | trim }}
+DNS = 1.1.1.1
+
+[Peer]
+PublicKey = {{ public.content | b64decode | trim }}
+AllowedIPs = {{ allowed_ips | default(vpn_ip) }}
+Endpoint = {{ vpn_server_host }}:{{ wireguard_port }}
+PersistentKeepalive = 25
+
+{#
 {% for node in play_hosts %}
 [Peer]
 PublicKey = {{ hostvars[node].public.content | b64decode | trim }}
-AllowedIPs = {{ hostvars[node].vpn_ip }}
+AllowedIPs = {{ hostvars[node].allowed_ips | default(hostvars[node].vpn_ip) }}
 Endpoint = {{ hostvars[node]['ansible_host'] | default(hostvars[node]['inventory_hostname']) }}:{{ wireguard_port }}
 PersistentKeepalive = 25
 
 {% endfor %}
+
 
 {% if wireguard_additional_peers %}
 {% for node in wireguard_additional_peers %}
@@ -20,3 +34,5 @@ AllowedIPs = {{ node.ip }}
 
 {% endfor %}
 {% endif %}
+
+#}

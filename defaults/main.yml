@@ -7,8 +7,9 @@ wireguard_network_name: "private"
 debian_enable_testing: true
 debian_pin_packages: true
 
-client_vpn_ip: ""
-client_wireguard_path: "~/wg.conf"
+
+clients: []
+client_wireguard_path: "~/wireguard-configs"
 
 wireguard_additional_peers: false
 wireguard_post_up: false

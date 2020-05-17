@@ -19,6 +19,16 @@ Endpoint = {{ hostvars[node]['ansible_host'] | default(hostvars[node]['inventory
 {% endif %}
 {% endfor %}
 
+# Clients:
+
+{% for client in client_keydata %}
+[Peer]
+PublicKey = {{ client.0.content | b64decode | trim }}
+AllowedIPs = {{ client.0.item.ip }}
+{% endfor %}
+
+{#
+
 {% if client_wireguard_path | length > 0 %}
 [Peer]
 PublicKey = {{ client_publickey.content | b64decode | trim }}
@@ -40,3 +50,6 @@ PersistentKeepalive = {{ node.keepalive }}
 
 {% endfor %}
 {% endif %}
+#}
+
+{# {{ client_keydata | to_yaml | comment }} #}
