@@ -7,9 +7,12 @@ wireguard_network_name: "private"
 debian_enable_testing: true
 debian_pin_packages: true
 
-
+# client configs will be written to client_wireguard_path on the ansible control
+# host (localhost).  By default, they'll be of the form: 'example.com.conf'.
+# You can provide a suffix (ex: '-foo') and you'll get 'example.com-foo.conf'.
 clients: []
 client_wireguard_path: "~/wireguard-configs"
+client_config_file_suffix: ""
 
 wireguard_additional_peers: false
 wireguard_post_up: false

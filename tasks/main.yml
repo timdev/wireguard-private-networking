@@ -65,6 +65,12 @@
     path: "{{ wireguard_path }}/privatekey"
   register: privatekey
 
+- name: "Ensure {{ wireguard_path }} (wireguard_path) exists"
+  file:
+    path: "{{ wireguard_path }}"
+    state: directory
+    mode: 0700
+
 - name: Generate wireguard keys
   shell: "umask 077; wg genkey | tee {{ wireguard_path  }}/privatekey | wg pubkey > {{ wireguard_path }}/publickey"
   when: not privatekey.stat.exists
@@ -180,7 +186,7 @@
 - name: Generate client's config
   template:
     src: client.conf.j2
-    dest: "{{ client_wireguard_path }}/{{ item.0.item.name }}/{{ inventory_hostname }}.conf"
+    dest: "{{ client_wireguard_path }}/{{ item.0.item.name }}/{{ inventory_hostname }}{{ client_config_file_suffix }}.conf"
     mode: 0600
 #  vars:
 #    ansible_connection: local
