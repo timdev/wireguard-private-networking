@@ -1,8 +1,24 @@
-# Private server to server network with ansible and wireguard 
- 
-[![Ansible Role](https://img.shields.io/ansible/role/d/33136)](https://galaxy.ansible.com/mawalu/wireguard_private_networking)
- 
-This role allowes you to deploy a fast, secure and provider agnostic private network between multiple servers. This is usefull for providers like [hetzner cloud](https://hetzner.cloud) that do not provide you with a private network or if you want to connect servers that are spread over multiple regions and providers.
+# Manage a network of wireguard servers and clients.
+
+## This is a fork
+
+This role is now a fork of `mawalu.wiregaurd_private_networking`, with expanded support for managing client configs.
+
+My use-case is different than the upstream.  In my case, I'm mostly interested in networking developer VMs in various
+locations around the world (wherever the developer happens to be sitting), and allowing developers (and other 
+stakeholders) to participate in the dev-vm network from their primary devices, so they can browse web apps running on 
+a remote dev's VM, or SSH into a remote VM to help troubleshoot.
+
+To support this, I need to not only provision/configure one or more wireguard "servers" (with static, routable public 
+IPs), but also several (or even "many") wireguard config files that can be distributed to individuals to use on their
+local machines.
+
+Most of the changes aren't documented yet.
+
+At some point, it would be nice to merge this back upstream. However, it's not clear when I'll have time to think it
+through, nor is it clear if I've gone too far out of the scope @mawalu wants to address. 
+
+
 
 ## How
 
