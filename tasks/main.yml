@@ -80,7 +80,6 @@
     src: "{{ wireguard_path }}/privatekey"
   register: private
 
-
 - name: Read public key
   slurp:
     src: "{{ wireguard_path }}/publickey"
@@ -153,7 +152,6 @@
   delegate_to: localhost
   become: false
   when: clients | length > 0
-  tags: ["dbg"]
 
 - name: Generate configs
   template:
@@ -172,7 +170,6 @@
   loop: "{{ client_keydata }}"
   delegate_to: localhost
   run_once: true
-  tags: ["dbg"]
 
 # because in the client-config template, template, inventory_hostname=localhost
 - name: Set vpn_server_host fact for clients
